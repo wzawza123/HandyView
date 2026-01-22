@@ -11,4 +11,5 @@ pyinstaller -D handyview/handyviewer.py \
   --hidden-import="PIL.ImageDraw" \
   --hidden-import="PyQt5.QtMultimedia" \
   --hidden-import="PyQt5.QtMultimediaWidgets" \
-  --hidden-import="imagehash"
+  --hidden-import="imagehash" \
+  --hidden-import="json"

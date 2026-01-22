@@ -409,7 +409,7 @@ class MainWindow(QMainWindow):
             self.hvdb.interval = interval
 
         if self.hvdb.get_folder_len() > 1:
-            self.switch_compare_canvas()
+            self.switch_compare_canvas(auto=True)
         else:
             self.center_canvas.canvas.update_path_list()
             self.center_canvas.canvas.show_image(init=True)
@@ -432,30 +432,39 @@ class MainWindow(QMainWindow):
             self.add_dock_window()
             self.canvas_type = 'main'
 
-    def switch_compare_canvas(self):
+    def switch_compare_canvas(self, auto=False):
         if self.canvas_type != 'compare':
             num_compare = self.hvdb.get_folder_len()
+            num_view = 1
             if num_compare == 1:
-                num_view, ok = QInputDialog.getText(self, 'Compare Canvas', '# Compare Columns: (options: 2, 3, 4)',
-                                                    QLineEdit.Normal, '2')
-                if ok:
-                    try:
-                        num_view = int(num_view)
-                    except Exception:
-                        show_msg(icon='Warning', title='Warning', text='# Compare Columns should be int.')
-                    if num_view > 4 or num_view < 2:
-                        show_msg(icon='Warning', title='Warning', text='# Compare Columns should be 2, 3, 4.')
+                if auto:
+                    if self.hvdb.interval > 0:
+                        num_view = min(max(self.hvdb.interval + 1, 2), 4)
+                    else:
+                        num_view = 2
                     self.hvdb.interval = num_view - 1
-                else:  # when press the 'Cancellation' button
-                    self.hvdb.interval = 1
-                    num_view = 1
+                else:
+                    num_view, ok = QInputDialog.getText(self, 'Compare Canvas', '# Compare Columns: (options: 2, 3, 4)',
+                                                        QLineEdit.Normal, '2')
+                    if ok:
+                        try:
+                            num_view = int(num_view)
+                        except Exception:
+                            show_msg(icon='Warning', title='Warning', text='# Compare Columns should be int.')
+                        if num_view > 4 or num_view < 2:
+                            show_msg(icon='Warning', title='Warning', text='# Compare Columns should be 2, 3, 4.')
+                        self.hvdb.interval = num_view - 1
+                    else:  # when press the 'Cancellation' button
+                        self.hvdb.interval = 1
+                        num_view = 1
             else:  # for comparing mode
                 if not self.hvdb.is_same_len:
                     show_msg('Critical', 'Warning', ('Compare folders have different length, \n'
                                                      'It may introduce misalignment and errors.'))
                 self.hvdb.fidx = 0
                 num_view = min(self.hvdb.get_folder_len(), 4)
-                show_msg('Information', 'Compare Canvas', f'Comparsion folder mode.\n # Compare Columns: {num_view}.')
+                if not auto:
+                    show_msg('Information', 'Compare Canvas', f'Comparsion folder mode.\n # Compare Columns: {num_view}.')
 
             if num_view > 1:
                 self.dock_info.close()
