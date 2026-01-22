@@ -119,6 +119,14 @@ For python user, you can also launch HandyView from the command line:
 
 For Windows and MacOS users, you can find the instructions of compiling the executable program from [how-to-build](how_to_build.md).
 
+## Importing workspace
+
+```cmd
+python -m handyview.handyviewer --workspace "your_workspace.json"
+```
+
+
+
 ## :book: Document (On the way)
 
 The basic operation (such as shortcut keys) could be found in the *Help* button in the toolbar.
