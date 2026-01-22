@@ -88,6 +88,14 @@ def clear_compare(parent):
     return new_action(parent, 'Clear Comp', icon_name='clear_comparison.png', slot=parent.clear_compare)
 
 
+def export_compare_workspace(parent):
+    return new_action(parent, 'Export Workspace', slot=parent.export_compare_workspace)
+
+
+def import_compare_workspace(parent):
+    return new_action(parent, 'Import Workspace', slot=parent.import_compare_workspace)
+
+
 # ---------------------------------------
 # canvas layouts
 # ---------------------------------------

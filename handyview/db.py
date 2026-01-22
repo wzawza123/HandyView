@@ -1,4 +1,5 @@
 import hashlib
+import json
 import imagehash
 import os
 from PIL import Image, ImageFile
@@ -283,3 +284,129 @@ class HVDB():
     @interval.setter
     def interval(self, value):
         self._interval = value
+
+    def get_compare_workspace_data(self):
+        return {
+            'version': 1,
+            'folders': self.folder_list,
+            'pidx': self._pidx,
+            'fidx': self._fidx,
+            'include_names': self._include_names,
+            'exclude_names': self._exclude_names,
+            'exact_exclude_names': self._exact_exclude_names,
+            'recursive_scan_folder': self.recursive_scan_folder,
+            'interval': self._interval
+        }
+
+    def export_compare_workspace(self, workspace_path):
+        data = self.get_compare_workspace_data()
+        folders = data.get('folders', [])
+        if not folders or folders[0] in [None, '']:
+            return False, 'No workspace folders to export.'
+        try:
+            with open(workspace_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception as error:
+            return False, f'Export workspace failed: {error}'
+        return True, None
+
+    def load_compare_workspace(self, workspace_path, override_path=None):
+        try:
+            with open(workspace_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception as error:
+            return False, f'Load workspace failed: {error}'
+        return self.apply_compare_workspace(data, override_path=override_path)
+
+    def apply_compare_workspace(self, data, override_path=None):
+        folders = data.get('folders')
+        if not folders or not isinstance(folders, list):
+            return False, 'Invalid workspace: missing folders.'
+
+        include_names = data.get('include_names')
+        exclude_names = data.get('exclude_names')
+        exact_exclude_names = data.get('exact_exclude_names')
+        recursive_scan_folder = bool(data.get('recursive_scan_folder', False))
+
+        img_lists = []
+        missing = []
+        empty = []
+        for idx, folder in enumerate(folders):
+            if not isinstance(folder, str) or folder == '':
+                missing.append(str(folder))
+                img_lists.append([])
+                continue
+            if not os.path.isdir(folder):
+                missing.append(folder)
+                img_lists.append([])
+                continue
+            if idx == 0 and recursive_scan_folder:
+                paths = [
+                    path.replace('\\', '/')
+                    for path in scandir(folder, suffix=FORMATS, recursive=True, full_path=True)
+                ]
+            else:
+                paths = get_img_list(folder, include_names, exclude_names, exact_exclude_names)
+            if not paths:
+                empty.append(folder)
+            img_lists.append(paths)
+
+        if missing or empty:
+            msg_parts = []
+            if missing:
+                msg_parts.append('Missing folders:\n' + '\n'.join(missing))
+            if empty:
+                msg_parts.append('No images in:\n' + '\n'.join(empty))
+            return False, '\n'.join(msg_parts)
+
+        self._include_names = include_names
+        self._exclude_names = exclude_names
+        self._exact_exclude_names = exact_exclude_names
+        self.recursive_scan_folder = recursive_scan_folder
+
+        self.folder_list = folders
+        self.path_list = img_lists
+        self.file_size_list = [[None] * len(paths) for paths in img_lists]
+        self.md5_list = [[None] * len(paths) for paths in img_lists]
+        self.phash_list = [[None] * len(paths) for paths in img_lists]
+
+        interval = data.get('interval', 0)
+        try:
+            self._interval = int(interval)
+        except Exception:
+            self._interval = 0
+
+        pidx = data.get('pidx', 0)
+        fidx = data.get('fidx', 0)
+        try:
+            pidx = int(pidx)
+        except Exception:
+            pidx = 0
+        try:
+            fidx = int(fidx)
+        except Exception:
+            fidx = 0
+
+        if override_path:
+            override_path = override_path.replace('\\', '/')
+            if override_path in self.path_list[0]:
+                pidx = self.path_list[0].index(override_path)
+
+        main_len = len(self.path_list[0])
+        if pidx < 0:
+            pidx = 0
+        elif pidx >= main_len:
+            pidx = main_len - 1
+        self._pidx = pidx
+        self.fidx = fidx
+
+        self.is_same_len = True
+        img_len_list = [len(self.path_list[0])]
+        for img_list in self.path_list[1:]:
+            img_len_list.append(len(img_list))
+            if len(img_list) != img_len_list[0]:
+                self.is_same_len = False
+
+        self.init_path = self.path_list[0][self._pidx]
+        self.save_open_history()
+        return True, img_len_list

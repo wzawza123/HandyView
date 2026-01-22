@@ -77,17 +77,13 @@ class CenterWidget(QWidget):
 class MainWindow(QMainWindow):
     """The main window."""
 
-    def __init__(self, init_path=None):
+    def __init__(self, init_path=None, workspace_path=None):
         super(MainWindow, self).__init__()
         self.empty = False
+        self.cli_init_path = init_path
         if init_path is None:
-            # get initial path
-            try:
-                init_path = sys.argv[1]
-            except IndexError:
-                # show the icon image
-                init_path = os.path.join(ROOT_DIR, 'icon.png')
-                self.empty = True
+            init_path = os.path.join(ROOT_DIR, 'icon.png')
+            self.empty = True
         # initialize HVDB (handyview database), which stores the path info
         self.hvdb = HVDB(init_path)
 
@@ -105,6 +101,9 @@ class MainWindow(QMainWindow):
         # self.init_statusbar()
         self.init_central_window()
         self.add_dock_window()
+
+        if workspace_path:
+            self.load_compare_workspace(workspace_path, override_path=self.cli_init_path)
 
     def init_menubar(self):
         # create menubar
@@ -131,6 +130,10 @@ class MainWindow(QMainWindow):
         compare_menu = menubar.addMenu('&Compare(比较)')
         compare_menu.addAction(actions.compare(self))
         compare_menu.addAction(actions.clear_compare(self))
+        compare_menu.addSeparator()
+        compare_menu.addAction(actions.export_compare_workspace(self))
+        compare_menu.addAction(actions.import_compare_workspace(self))
+        compare_menu.addSeparator()
         compare_menu.addAction(actions.set_fingerprint(self))
 
         # Layouts
@@ -370,6 +373,52 @@ class MainWindow(QMainWindow):
         # clear the text description in the dock window
         self.center_canvas.canvas.update_path_list()
 
+    def export_compare_workspace(self):
+        default_dir = self.hvdb.get_folder()
+        if not default_dir:
+            default_dir = '.'
+        default_path = os.path.join(default_dir, 'compare_workspace.json')
+        key, _ = QFileDialog.getSaveFileName(
+            self, 'Export Compare Workspace', default_path,
+            'HandyView Workspace (*.hvworkspace *.json);;All Files (*)')
+        if key:
+            ok, msg = self.hvdb.export_compare_workspace(key)
+            if ok:
+                show_msg('Information', 'Compare Workspace', f'Exported to:\n{key}')
+            else:
+                show_msg('Warning', 'Compare Workspace', msg)
+
+    def import_compare_workspace(self):
+        default_dir = self.hvdb.get_folder()
+        if not default_dir:
+            default_dir = '.'
+        key, _ = QFileDialog.getOpenFileName(
+            self, 'Import Compare Workspace', default_dir,
+            'HandyView Workspace (*.hvworkspace *.json);;All Files (*)')
+        if key:
+            self.load_compare_workspace(key, show_success=True)
+
+    def load_compare_workspace(self, workspace_path, override_path=None, show_success=False):
+        ok, msg = self.hvdb.load_compare_workspace(workspace_path, override_path=override_path)
+        if not ok:
+            show_msg('Warning', 'Compare Workspace', msg)
+            return False
+        interval = self.hvdb.interval
+        if self.canvas_type != 'main':
+            self.switch_main_canvas()
+            self.hvdb.interval = interval
+
+        if self.hvdb.get_folder_len() > 1:
+            self.switch_compare_canvas()
+        else:
+            self.center_canvas.canvas.update_path_list()
+            self.center_canvas.canvas.show_image(init=True)
+        self.center_canvas.canvas_crop.update_db(self.hvdb)
+        self.empty = False
+        if show_success:
+            show_msg('Information', 'Compare Workspace', f'Loaded:\n{workspace_path}')
+        return True
+
     # ---------------------------------------
     # slots: canvas layouts
     # ---------------------------------------
@@ -463,17 +512,26 @@ class MainWindow(QMainWindow):
             self.center_canvas.canvas.show_image(init=False)
 
 
-def create_new_window(init_path=None):
+def create_new_window(init_path=None, workspace_path=None):
     screen = app.primaryScreen()
     size = screen.size()
     # rect = screen.availableGeometry()
 
-    mainwindow = MainWindow(init_path)
+    mainwindow = MainWindow(init_path, workspace_path=workspace_path)
     mainwindow.setWindowIcon(QIcon(os.path.join(ROOT_DIR, 'icon.ico')))
     mainwindow.setGeometry(0, 0, size.width(), size.height())  # (left, top, width, height)
     mainwindow.showMaximized()
 
     return mainwindow
+
+
+def parse_args(argv):
+    import argparse
+    parser = argparse.ArgumentParser(description='HandyView image viewer.')
+    parser.add_argument('path', nargs='?', help='Image file or folder to open.')
+    parser.add_argument('-w', '--workspace', dest='workspace', help='Compare workspace file to load.')
+    args, qt_args = parser.parse_known_args(argv[1:])
+    return args, [argv[0]] + qt_args
 
 
 if __name__ == '__main__':
@@ -484,8 +542,9 @@ if __name__ == '__main__':
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('HandyView')
     print('Welcome to HandyView.')
 
-    app = Application(sys.argv)
-    app.window_list.append(create_new_window())
+    args, qt_args = parse_args(sys.argv)
+    app = Application(qt_args)
+    app.window_list.append(create_new_window(init_path=args.path, workspace_path=args.workspace))
     # change status bar info
     # mainwindow.set_statusbar(f'Screen: {screen.name()} with size {size.width()} x {size.height()}.')
 
