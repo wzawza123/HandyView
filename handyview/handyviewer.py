@@ -377,11 +377,14 @@ class MainWindow(QMainWindow):
         default_dir = self.hvdb.get_folder()
         if not default_dir:
             default_dir = '.'
-        default_path = os.path.join(default_dir, 'compare_workspace.json')
+        default_path = os.path.join(default_dir, 'compare_workspace.hvjson')
         key, _ = QFileDialog.getSaveFileName(
             self, 'Export Compare Workspace', default_path,
-            'HandyView Workspace (*.hvworkspace *.json);;All Files (*)')
+            'HandyView Workspace (*.hvjson);;All Files (*)')
         if key:
+            base, ext = os.path.splitext(key)
+            if ext.lower() != '.hvjson':
+                key = base + '.hvjson'
             ok, msg = self.hvdb.export_compare_workspace(key)
             if ok:
                 show_msg('Information', 'Compare Workspace', f'Exported to:\n{key}')
@@ -394,7 +397,7 @@ class MainWindow(QMainWindow):
             default_dir = '.'
         key, _ = QFileDialog.getOpenFileName(
             self, 'Import Compare Workspace', default_dir,
-            'HandyView Workspace (*.hvworkspace *.json);;All Files (*)')
+            'HandyView Workspace (*.hvjson);;All Files (*)')
         if key:
             self.load_compare_workspace(key, show_success=True)
 
