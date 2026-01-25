@@ -107,6 +107,9 @@ class Canvas(QWidget):
         blank_label = HVLable('', self, 'black', 'Times', 12)
         main_layout.addWidget(blank_label, 61, 0, 1, 1)
 
+    def set_statusbar(self, text):
+        self.parent.set_statusbar(text)
+
     def keyPressEvent(self, event):
         modifiers = QApplication.keyboardModifiers()
         if event.key() == QtCore.Qt.Key_F9:
@@ -218,6 +221,8 @@ class Canvas(QWidget):
 
     def show_image(self, init=False):
         interval_mode = (self.db.get_folder_len() == 1)
+        statusbar_set = False
+        first_img_path = None
         for idx, qscene in enumerate(self.qscenes):
             qview = self.qviews[idx]
             if interval_mode:
@@ -241,12 +246,19 @@ class Canvas(QWidget):
 
             qimg = QImage(img_path)
             self.img_path = img_path
+            qview.img_path = img_path
             if idx == 0:
+                first_img_path = img_path
                 # for HVView, HVScene show_mouse_color.
                 # only work on the first qimg (main canvas mode)
                 self.qimg = qimg
                 # show image path in the statusbar
                 self.parent.set_statusbar(f'{img_path}')
+                statusbar_set = True
+
+            if qview.hasFocus():
+                self.parent.set_statusbar(f'{img_path}')
+                statusbar_set = True
 
             # --------------- auto zoom scale ratio -------------------
             if self.target_zoom_width > 0:
@@ -311,6 +323,9 @@ class Canvas(QWidget):
             # set the scroll bar position, so that it can keep the same position in auto_zoom
             qview.verticalScrollBar().setSliderPosition(qview.vertical_scroll_value)
             qview.horizontalScrollBar().setSliderPosition(qview.horizontal_scroll_value)
+
+        if not statusbar_set and first_img_path:
+            self.parent.set_statusbar(f'{first_img_path}')
 
         # set include and exclude name info
         if self.num_view == 1:

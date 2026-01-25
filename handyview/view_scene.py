@@ -28,6 +28,7 @@ class HVView(QGraphicsView):
         self.zoom = 1
         self.rotate = 0
         self.shown_text = None
+        self.img_path = None
 
         self.vertical_scroll_value = 0
         self.horizontal_scroll_value = 0
@@ -84,6 +85,8 @@ class HVView(QGraphicsView):
     def focusInEvent(self, event):
         self.set_shown_text(text=None, color='red')
         self.scene().update()  # update the shown text
+        if self.img_path:
+            self.parent.set_statusbar(self.img_path)
 
     def focusOutEvent(self, event):
         self.set_shown_text(text=None, color='green')
