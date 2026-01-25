@@ -540,9 +540,12 @@ def create_new_window(init_path=None, workspace_path=None):
 def parse_args(argv):
     import argparse
     parser = argparse.ArgumentParser(description='HandyView image viewer.')
-    parser.add_argument('path', nargs='?', help='Image file or folder to open.')
+    parser.add_argument('path', nargs='?', help='Image/folder to open, or a .hvjson workspace.')
     parser.add_argument('-w', '--workspace', dest='workspace', help='Compare workspace file to load.')
     args, qt_args = parser.parse_known_args(argv[1:])
+    if args.path and args.workspace is None and args.path.lower().endswith('.hvjson'):
+        args.workspace = args.path
+        args.path = None
     return args, [argv[0]] + qt_args
 
 

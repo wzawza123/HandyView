@@ -32,7 +32,8 @@ class HVView(QGraphicsView):
         self.vertical_scroll_value = 0
         self.horizontal_scroll_value = 0
 
-        self.font = QFont('times', 15)
+        # Smaller font for the top-left overlay text.
+        self.font = QFont('times', 12)
         font_metrics = QFontMetrics(self.font)
         self.text_height = font_metrics.height()
 
