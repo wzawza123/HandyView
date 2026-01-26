@@ -1,5 +1,10 @@
 import os
 import sys
+
+try:
+    import pyperclip
+except Exception:
+    pyperclip = None
 from PyQt5 import QtCore
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QApplication, QDockWidget, QFileDialog, QGridLayout, QInputDialog, QLabel, QLineEdit,
@@ -387,7 +392,23 @@ class MainWindow(QMainWindow):
                 key = base + '.hvjson'
             ok, msg = self.hvdb.export_compare_workspace(key)
             if ok:
-                show_msg('Information', 'Compare Workspace', f'Exported to:\n{key}')
+                copied = False
+                copy_error = None
+                if pyperclip is not None:
+                    try:
+                        clip_path = '"' + key.replace('/', '\\\\') + '"'
+                        pyperclip.copy(clip_path)
+                        copied = True
+                    except Exception as error:
+                        copy_error = error
+                if copied:
+                    show_msg('Information', 'Compare Workspace', f'Exported to:\n{key}\n\nPath copied to clipboard.')
+                elif pyperclip is None:
+                    show_msg('Information', 'Compare Workspace',
+                             f'Exported to:\n{key}\n\nClipboard copy skipped (pyperclip not available).')
+                else:
+                    show_msg('Information', 'Compare Workspace',
+                             f'Exported to:\n{key}\n\nClipboard copy failed: {copy_error}')
             else:
                 show_msg('Warning', 'Compare Workspace', msg)
 

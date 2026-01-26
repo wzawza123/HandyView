@@ -1,3 +1,4 @@
 Pillow
 imagehash
 pyqt5
+pyperclip
