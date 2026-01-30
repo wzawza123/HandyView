@@ -278,6 +278,7 @@ class MainWindow(QMainWindow):
             if ok:
                 self.hvdb.init_path = key
                 self.hvdb.get_init_path_list()
+                self.clear_compare()
                 self.center_canvas.canvas.show_image(init=True)
                 self.center_canvas.canvas_crop.update_db(self.hvdb)
         self.empty = False
@@ -290,6 +291,7 @@ class MainWindow(QMainWindow):
         if ok:
             self.hvdb.init_path = key
             self.hvdb.get_init_path_list()
+            self.clear_compare()
             self.center_canvas.canvas.show_image(init=True)
             self.center_canvas.canvas_crop.update_db(self.hvdb)
         self.empty = False
