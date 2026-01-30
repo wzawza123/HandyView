@@ -365,8 +365,20 @@ class MainWindow(QMainWindow):
         if self.canvas_type != 'main':
             self.switch_main_canvas()
 
-        key, ok = QFileDialog.getOpenFileName(self, 'Select an image', os.path.join(self.hvdb.get_folder(), '../'))
+        default_dir = None
+        if getattr(self, 'last_compare_path', None):
+            default_dir = os.path.dirname(os.path.dirname(self.last_compare_path))
+            if not default_dir or not os.path.isdir(default_dir):
+                default_dir = None
+        if not default_dir:
+            default_dir = self.hvdb.get_folder()
+            if default_dir:
+                default_dir = os.path.join(default_dir, '../')
+            else:
+                default_dir = '.'
+        key, ok = QFileDialog.getOpenFileName(self, 'Select an image', default_dir)
         if ok:
+            self.last_compare_path = key
             self.center_canvas.canvas.add_cmp_folder(key)
 
     def clear_compare(self):
