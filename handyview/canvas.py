@@ -42,6 +42,7 @@ class Canvas(QWidget):
         for i in range(self.num_view):
             self.qscenes.append(HVScene(self, show_info=show_info))
             self.qviews.append(HVView(self.qscenes[i], self, show_info=show_info))
+            self.qviews[i].installEventFilter(self)
 
         # ---------------------------------------
         # Dock window widgets
@@ -111,10 +112,22 @@ class Canvas(QWidget):
     def set_statusbar(self, text):
         self.parent.set_statusbar(text)
 
+    def eventFilter(self, obj, event):
+        if obj in self.qviews:
+            if event.type() == QtCore.QEvent.ShortcutOverride and event.key() == QtCore.Qt.Key_Alt:
+                event.accept()
+                return True
+            if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Alt:
+                self.sync_compare_view_positions()
+                return True
+        return super(Canvas, self).eventFilter(obj, event)
+
     def keyPressEvent(self, event):
         modifiers = QApplication.keyboardModifiers()
         if event.key() == QtCore.Qt.Key_F9:
             self.toggle_bg_color()
+        elif event.key() == QtCore.Qt.Key_Alt:
+            self.sync_compare_view_positions()
         elif event.key() == QtCore.Qt.Key_R:
             for qview in self.qviews:
                 qview.set_zoom(1)
@@ -221,6 +234,26 @@ class Canvas(QWidget):
                 self.comparison_label.setStyleSheet('QLabel {color : red;}')
             else:
                 self.comparison_label.setStyleSheet('QLabel {color : black;}')
+
+    def sync_compare_view_positions(self):
+        if self.num_view <= 1:
+            return
+
+        reference_view = None
+        for qview in self.qviews:
+            if qview.hasFocus():
+                reference_view = qview
+                break
+        if reference_view is None:
+            reference_view = self.qviews[0]
+
+        viewport_center = reference_view.viewport().rect().center()
+        scene_center = reference_view.mapToScene(viewport_center)
+
+        for qview in self.qviews:
+            qview.centerOn(scene_center)
+            qview.vertical_scroll_value = qview.verticalScrollBar().value()
+            qview.horizontal_scroll_value = qview.horizontalScrollBar().value()
 
     def _prepare_compare_qimage(self, qimg, target_width, target_height):
         if qimg.width() == target_width and qimg.height() == target_height:
