@@ -219,12 +219,38 @@ class Canvas(QWidget):
             else:
                 self.comparison_label.setStyleSheet('QLabel {color : black;}')
 
+    def _prepare_compare_qimage(self, qimg, target_width, target_height):
+        if qimg.width() == target_width and qimg.height() == target_height:
+            return qimg
+
+        scaled_qimg = qimg.scaled(target_width, target_height, QtCore.Qt.KeepAspectRatio,
+                                  QtCore.Qt.SmoothTransformation)
+        canvas = QImage(target_width, target_height, QImage.Format_ARGB32)
+        canvas.fill(QtCore.Qt.transparent)
+
+        painter = QPainter()
+        painter.begin(canvas)
+        x_offset = (target_width - scaled_qimg.width()) // 2
+        y_offset = (target_height - scaled_qimg.height()) // 2
+        painter.drawImage(x_offset, y_offset, scaled_qimg)
+        painter.end()
+        return canvas
+
+    def _get_compare_target_size(self):
+        compare_width = 0
+        compare_height = 0
+        for fidx in range(self.db.get_folder_len()):
+            width, height = self.db.get_shape(fidx=fidx)
+            compare_width = max(compare_width, width)
+            compare_height = max(compare_height, height)
+        return compare_width, compare_height
+
     def show_image(self, init=False):
         interval_mode = (self.db.get_folder_len() == 1)
         statusbar_set = False
         first_img_path = None
-        for idx, qscene in enumerate(self.qscenes):
-            qview = self.qviews[idx]
+        image_infos = []
+        for idx in range(len(self.qscenes)):
             if interval_mode:
                 pidx = self.db.pidx + idx
                 img_path = self.db.get_path(pidx=pidx)[0]
@@ -244,7 +270,47 @@ class Canvas(QWidget):
                     md5, phash = self.db.get_fingerprint(fidx=fidx)
                     md5_0, phash_0 = self.db.get_fingerprint(fidx=self.db.fidx)
 
+            image_info = {
+                'img_path': img_path,
+                'width': width,
+                'height': height,
+                'file_size': file_size,
+                'color_type': color_type,
+            }
+            if self.show_fingerprint:
+                image_info.update({
+                    'md5': md5,
+                    'phash': phash,
+                    'md5_0': md5_0,
+                    'phash_0': phash_0,
+                })
+            image_infos.append(image_info)
+
+        normalize_compare_size = (not interval_mode and self.db.get_folder_len() > 1)
+        if normalize_compare_size:
+            compare_width, compare_height = self._get_compare_target_size()
+
+        for idx, qscene in enumerate(self.qscenes):
+            qview = self.qviews[idx]
+            image_info = image_infos[idx]
+            img_path = image_info['img_path']
+            width = image_info['width']
+            height = image_info['height']
+            file_size = image_info['file_size']
+            color_type = image_info['color_type']
+            if self.show_fingerprint:
+                md5 = image_info['md5']
+                phash = image_info['phash']
+                md5_0 = image_info['md5_0']
+                phash_0 = image_info['phash_0']
+
             qimg = QImage(img_path)
+            if normalize_compare_size:
+                qimg = self._prepare_compare_qimage(qimg, compare_width, compare_height)
+                scene_width, scene_height = compare_width, compare_height
+            else:
+                scene_width, scene_height = width, height
+
             self.img_path = img_path
             qview.img_path = img_path
             if idx == 0:
@@ -317,9 +383,9 @@ class Canvas(QWidget):
 
             qscene.clear()
             qscene.addPixmap(qpixmap)
-            qscene.set_width_height(width, height)
+            qscene.set_width_height(scene_width, scene_height)
             # put image always in the center of a QGraphicsView
-            qscene.setSceneRect(0, 0, width, height)
+            qscene.setSceneRect(0, 0, scene_width, scene_height)
             # set the scroll bar position, so that it can keep the same position in auto_zoom
             qview.verticalScrollBar().setSliderPosition(qview.vertical_scroll_value)
             qview.horizontalScrollBar().setSliderPosition(qview.horizontal_scroll_value)
@@ -347,8 +413,9 @@ class Canvas(QWidget):
             self.exclude_names_label.setText(show_str)
 
         if init:
-            if width < 500:
-                self.qviews[0].set_zoom(500 // width)
+            init_width = self.qimg.width()
+            if init_width < 500:
+                self.qviews[0].set_zoom(500 // init_width)
             else:
                 self.qviews[0].set_zoom(1)
         for qview in self.qviews:
