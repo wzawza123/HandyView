@@ -27,6 +27,7 @@ class Canvas(QWidget):
 
         # for auto zoom ratio
         self.target_zoom_width = 0
+        self.compare_scale_notice_shown = False
 
         self.show_image(init=True)
 
@@ -192,6 +193,7 @@ class Canvas(QWidget):
 
     def add_cmp_folder(self, cmp_path):
         is_same_len, img_len_list = self.db.add_cmp_folder(cmp_path)
+        self.compare_scale_notice_shown = False
         show_str = 'Number for each folder:\n\t' + '\n\t'.join(map(str, img_len_list))
         self.comparison_label.setText(show_str)
         if is_same_len is False:
@@ -202,6 +204,7 @@ class Canvas(QWidget):
 
     def update_path_list(self):
         is_same_len, img_len_list = self.db.update_path_list()
+        self.compare_scale_notice_shown = False
         show_str = 'Comparison:\n # for each folder:\n\t' + '\n\t'.join(map(str, img_len_list))
         self.comparison_label.setText(show_str)
         if is_same_len is False:
@@ -237,13 +240,15 @@ class Canvas(QWidget):
         return canvas
 
     def _get_compare_target_size(self):
+        compare_sizes = []
         compare_width = 0
         compare_height = 0
         for fidx in range(self.db.get_folder_len()):
             width, height = self.db.get_shape(fidx=fidx)
+            compare_sizes.append((width, height))
             compare_width = max(compare_width, width)
             compare_height = max(compare_height, height)
-        return compare_width, compare_height
+        return compare_width, compare_height, compare_sizes
 
     def show_image(self, init=False):
         interval_mode = (self.db.get_folder_len() == 1)
@@ -288,7 +293,17 @@ class Canvas(QWidget):
 
         normalize_compare_size = (not interval_mode and self.db.get_folder_len() > 1)
         if normalize_compare_size:
-            compare_width, compare_height = self._get_compare_target_size()
+            compare_width, compare_height, compare_sizes = self._get_compare_target_size()
+            if len(set(compare_sizes)) > 1:
+                if not self.compare_scale_notice_shown:
+                    num_scaled = sum(size != (compare_width, compare_height) for size in compare_sizes)
+                    show_msg(
+                        'Information',
+                        'Compare Auto Scale',
+                        ('Compare 模式检测到图像尺寸不一致。\n'
+                         f'已自动按最大尺寸 {compare_width} x {compare_height} 等比缩放并居中显示。\n'
+                         f'本次共自动缩放 {num_scaled} 张图像。'))
+                    self.compare_scale_notice_shown = True
 
         for idx, qscene in enumerate(self.qscenes):
             qview = self.qviews[idx]
