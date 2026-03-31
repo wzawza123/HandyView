@@ -329,13 +329,11 @@ class Canvas(QWidget):
             compare_width, compare_height, compare_sizes = self._get_compare_target_size()
             if len(set(compare_sizes)) > 1:
                 if not self.compare_scale_notice_shown:
-                    num_scaled = sum(size != (compare_width, compare_height) for size in compare_sizes)
                     show_msg(
                         'Information',
                         'Compare Auto Scale',
                         ('Compare 模式检测到图像尺寸不一致。\n'
-                         f'已自动按最大尺寸 {compare_width} x {compare_height} 等比缩放并居中显示。\n'
-                         f'本次共自动缩放 {num_scaled} 张图像。'))
+                         f'已自动按最大尺寸 {compare_width} x {compare_height} 等比缩放并居中显示。'))
                     self.compare_scale_notice_shown = True
 
         for idx, qscene in enumerate(self.qscenes):
