@@ -128,6 +128,9 @@ class Canvas(QWidget):
             self.toggle_bg_color()
         elif event.key() == QtCore.Qt.Key_Alt:
             self.sync_compare_view_positions()
+        elif event.key() == QtCore.Qt.Key_S and modifiers == QtCore.Qt.NoModifier:
+            if self.db.get_folder_len() > 1:
+                self.sync_compare_view_positions(sync_zoom=True)
         elif event.key() == QtCore.Qt.Key_R:
             for qview in self.qviews:
                 qview.set_zoom(1)
@@ -235,7 +238,7 @@ class Canvas(QWidget):
             else:
                 self.comparison_label.setStyleSheet('QLabel {color : black;}')
 
-    def sync_compare_view_positions(self):
+    def sync_compare_view_positions(self, sync_zoom=False):
         if self.num_view <= 1:
             return
 
@@ -249,8 +252,11 @@ class Canvas(QWidget):
 
         viewport_center = reference_view.viewport().rect().center()
         scene_center = reference_view.mapToScene(viewport_center)
+        reference_zoom = reference_view.zoom
 
         for qview in self.qviews:
+            if sync_zoom and qview is not reference_view:
+                qview.set_zoom(reference_zoom)
             qview.centerOn(scene_center)
             qview.vertical_scroll_value = qview.verticalScrollBar().value()
             qview.horizontal_scroll_value = qview.horizontalScrollBar().value()

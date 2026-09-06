@@ -25,6 +25,7 @@ Z:                  Auto zoom
 Shift + Z:          Cancel auto zoom
 Ctrl + C:           Copy image, can be pasted in directory
 Space:              Next image
+S:                  Align zoom and position to the focused view (multiple comparison folders)
 Backspace:          Previous image
 Tab:                Switch the focused views
 
@@ -58,6 +59,7 @@ Z:                       自动缩放
 Shift + Z:               取消自动缩放
 Ctrl + C:                复制图像 (可在目录中直接粘贴)
 Space:                   图像切换, 下一张图像
+S:                       多文件夹对比时，以当前激活栏为基准同步所有栏的缩放和位置
 Backspace:               图像切换, 上一张图像
 Tab:                     改变激活的图片查看窗口
 
